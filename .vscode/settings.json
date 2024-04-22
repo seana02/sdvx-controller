@@ -1,0 +1,10 @@
+{
+    "arduino.clearOutputOnBuild": true,
+    "arduino.useArduinoCli": true,
+    "arduino.path": "F:\\code\\compiler\\",
+    "arduino.commandPath": "arduino-cli.exe",
+    "arduino.enableUSBDetection": true,
+    "cmake.configureOnOpen": true,
+    "cmake.options.statusBarVisibility": "icon",
+    "C_Cpp.default.compilerPath": "F:\\code\\compiler\\"
+}
