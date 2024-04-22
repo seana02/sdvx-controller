@@ -113,7 +113,7 @@ void loop() {
         }
 
         // configure LEDs
-        digitalWrite(ledArr[i], invert(states[i]));
+        digitalWrite(ledArr[i], !states[i]);
     }
 
     // output text spacer
@@ -170,9 +170,4 @@ char processKnob(int time[], int knobState, char CW, char CCW) {
     time[1] -= (time[1] > 0 ? 1 : 0);
 
     return output;
-}
-
-int invert(int x) {
-    // invert HIGH to LOW or LOW to HIGH
-    return x == HIGH ? LOW : HIGH;
 }
