@@ -7,31 +7,30 @@ const int knobCount = 2;
 const bool KEYBOARD_ENABLED = false;
 
 // buttons
-#define START 0
-#define BT_A 1
-#define BT_B 2
-#define BT_C 3
-#define BT_D 4
-#define FX_L 5
-#define FX_R 6
+const int START     = 0;
+const int BT_A      = 1;
+const int BT_B      = 2;
+const int BT_C      = 3;
+const int BT_D      = 4;
+const int FX_L      = 5;
+const int FX_R      = 6;
 
 // light
-#define LED_ST 7
-#define LED_A 8
-#define LED_B 9
-#define LED_C 10
-#define LED_D 11
-#define LED_L 12
-#define LED_R 13
+const int LED_ST    = 7;
+const int LED_A     = 8;
+const int LED_B     = 9;
+const int LED_C     = 10;
+const int LED_D     = 11;
+const int LED_L     = 12;
+const int LED_R     = 13;
 
-#define VOL_L1 14
-#define VOL_L2 15
-#define VOL_R1 16
-#define VOL_R2 17
-
-#define CW 1
-#define CCW -1
-#define BAD 0
+const int VOL_L1    = 14;
+const int VOL_L2    = 15;
+const int VOL_R1    = 16;
+const int VOL_R2    = 17;
+const int CW        = 1;
+const int CCW       = -1;
+const int BAD       = 0;
 // prev1 prev2 curr1 curr2
 // 1110 => CCW
 // 1000 => CCW
@@ -64,11 +63,13 @@ int states[btnCount + knobCount];
 int knobStates[knobCount];
 
 const char btnKeys[btnCount] = {'T', 'D', 'F', 'J', 'K', 'C', 'M'};
-#define L_CCW 'Q'
-#define L_CW  'W'
-#define R_CCW 'O'
-#define R_CW  'P'
+const char L_CCW    = 'Q';
+const char L_CW     = 'W';
+const char R_CCW    = 'O';
+const char R_CW     = 'P';
 
+const int ACTIVE_CYCLES = 1;
+int lTime[2], rTime[2];
 
 void setup() {
     Serial.begin(9600);
@@ -89,6 +90,8 @@ void setup() {
     pinMode(VOL_R2, INPUT_PULLUP);
 
     if (KEYBOARD_ENABLED) NKROKeyboard.begin();
+
+    lTime[0] = lTime[1] = rTime[0] = rTime[1] = 0;
 }
 
 void loop() {
@@ -116,56 +119,57 @@ void loop() {
     // output text spacer
     output += "  ";
 
-    // read encoders
+    // read encoders: convert to format prev1prev2curr1curr2
     knobStates[0] = ((knobStates[0] << 2) | (digitalRead(VOL_L1) << 1) | digitalRead(VOL_L2)) % (1 << 3);
     knobStates[1] = ((knobStates[1] << 2) | (digitalRead(VOL_R1) << 1) | digitalRead(VOL_R2)) % (1 << 3);
 
-    // VOL_L
-    if (knobDirection[knobStates[0]] == CCW) {
-        output += "L";
-        if (KEYBOARD_ENABLED) {
-            NKROKeyboard.release(L_CW);
-            NKROKeyboard.add(L_CCW);
-        }
-    } else if (knobDirection[knobStates[0]] == CW) {
-        output += "R";
-        if (KEYBOARD_ENABLED) {
-            NKROKeyboard.release(L_CCW);
-            NKROKeyboard.add(L_CW);
-        }
-    } else {
-        output += "x";
-        if (KEYBOARD_ENABLED) {
-            NKROKeyboard.release(L_CCW);
-            NKROKeyboard.release(L_CW);
-        }
-    }
-
-    // VOL_R
-    if (knobDirection[knobStates[1]] == CCW) {
-        output += "L";
-        if (KEYBOARD_ENABLED) {
-            NKROKeyboard.release(R_CW);
-            NKROKeyboard.add(R_CCW);
-        }
-    } else if (knobDirection[knobStates[1]] == CW) {
-        output += "R";
-        if (KEYBOARD_ENABLED) {
-            NKROKeyboard.release(R_CCW);
-            NKROKeyboard.add(R_CW);
-        }
-    } else {
-        output += "x";
-        if (KEYBOARD_ENABLED) {
-            NKROKeyboard.release(R_CCW);
-            NKROKeyboard.release(R_CW);
-        }
-    }
+    // VOL_L and VOL_R
+    output += processKnob(lTime, knobStates[0], L_CW, L_CCW);
+    output += processKnob(rTime, knobStates[1], R_CW, R_CCW);
 
     Serial.println(output);
     if (KEYBOARD_ENABLED) NKROKeyboard.send();
     
     delay(1);
+}
+
+char processKnob(int time[], int knobState, char CW, char CCW) {
+    // update knob direction if turning
+    if (knobDirection[knobState] == CCW) {
+        time[0] = ACTIVE_CYCLES;
+        time[1] = 0;
+    } else if (knobDirection[knobState] == CW) {
+        time[1] = ACTIVE_CYCLES;
+        time[0] = 0;
+    }
+
+    // decide output
+    char output;
+    if (time[0] > 0) {
+        output = 'L';
+        if (KEYBOARD_ENABLED) {
+            NKROKeyboard.release(CW);
+            NKROKeyboard.add(CCW);
+        }
+    } else if (time[1] > 0) {
+        output = 'R';
+        if (KEYBOARD_ENABLED) {
+            NKROKeyboard.release(CCW);
+            NKROKeyboard.add(CW);
+        }
+    } else {
+        output = 'x';
+        if (KEYBOARD_ENABLED) {
+            NKROKeyboard.release(CCW);
+            NKROKeyboard.release(CW);
+        }
+    }
+
+    // decrement active time
+    time[0] -= (time[0] > 0 ? 1 : 0);
+    time[1] -= (time[1] > 0 ? 1 : 0);
+
+    return output;
 }
 
 int invert(int x) {
