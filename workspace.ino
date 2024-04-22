@@ -6,28 +6,34 @@ const int btnCount = 7;
 const int knobCount = 2;
 const bool KEYBOARD_ENABLED = false;
 
+/**
+ * 
+ * Pin assignments
+ * 
+*/
+
 // buttons
 const int START     = 0;
-const int BT_A      = 1;
-const int BT_B      = 2;
-const int BT_C      = 3;
-const int BT_D      = 4;
-const int FX_L      = 5;
-const int FX_R      = 6;
+const int BT_A      = 2;
+const int BT_B      = 4;
+const int BT_C      = 6;
+const int BT_D      = 8;
+const int FX_L      = 14;
+const int FX_R      = 10;
 
 // light
-const int LED_ST    = 7;
-const int LED_A     = 8;
-const int LED_B     = 9;
-const int LED_C     = 10;
-const int LED_D     = 11;
-const int LED_L     = 12;
-const int LED_R     = 13;
+const int LED_ST    = 1;
+const int LED_A     = 3;
+const int LED_B     = 5;
+const int LED_C     = 7;
+const int LED_D     = 9;
+const int LED_L     = 15;
+const int LED_R     = 16;
 
-const int VOL_L1    = 14;
-const int VOL_L2    = 15;
-const int VOL_R1    = 16;
-const int VOL_R2    = 17;
+const int VOL_L1    = 20;
+const int VOL_L2    = 21;
+const int VOL_R1    = 18;
+const int VOL_R2    = 19;
 const int CW        = 1;
 const int CCW       = -1;
 const int BAD       = 0;
