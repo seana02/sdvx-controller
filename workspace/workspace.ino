@@ -62,7 +62,7 @@ const int knobDirection[16] = {
 };
 
 const int btnArr[btnCount] = {START, BT_A, BT_B, BT_C, BT_D, FX_L, FX_R};
-const String btnName[btnCount] = {"START", "BT_A", "BT_B", "BT_C", "BT_D", "FX_L", "FX_R"};
+const String btnName[btnCount] = {"START", "A_BT", "B_BT", "C_BT", "D_BT", "L_FX", "R_FX"};
 const int ledArr[btnCount] = {LED_ST, LED_A, LED_B, LED_C, LED_D, LED_L, LED_R};
 
 int states[btnCount + knobCount];
@@ -120,6 +120,7 @@ void loop() {
 
         // configure LEDs
         digitalWrite(ledArr[i], !states[i]);
+        //digitalWrite(ledArr[i], HIGH);
     }
 
     // output text spacer
