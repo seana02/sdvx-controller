@@ -30,10 +30,10 @@ const int LED_D     = 9;
 const int LED_L     = 15;
 const int LED_R     = 16;
 
-const int VOL_L1    = 20;
-const int VOL_L2    = 21;
-const int VOL_R1    = 18;
-const int VOL_R2    = 19;
+const int VOL_L1    = 18;
+const int VOL_L2    = 19;
+const int VOL_R1    = 20;
+const int VOL_R2    = 21;
 const int CW        = 1;
 const int CCW       = -1;
 const int BAD       = 0;
