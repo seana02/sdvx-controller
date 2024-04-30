@@ -55,10 +55,10 @@ const int BAD       = 0;
 // 
 
 const int knobDirection[16] = {
-      0, CCW,  CW, BAD,
-     CW,   0, BAD, CCW,
-    CCW, BAD,  0,   CW,
-    BAD,  CW, CCW,   0
+      0,  CW, CCW, BAD,
+    CCW,   0, BAD,  CW,
+     CW, BAD,  0,  CCW,
+    BAD, CCW,  CW,   0
 };
 
 const int btnArr[btnCount] = {START, BT_A, BT_B, BT_C, BT_D, FX_L, FX_R};
@@ -67,6 +67,10 @@ const int ledArr[btnCount] = {LED_ST, LED_A, LED_B, LED_C, LED_D, LED_L, LED_R};
 
 int states[btnCount + knobCount];
 int knobStates[knobCount];
+int knobPollCount = 0;
+int lHigh[2], rHigh[2];
+
+const int KNOB_REDUCTION = 10;
 
 const char btnKeys[btnCount] = {'T', 'D', 'F', 'J', 'K', 'C', 'M'};
 const char L_CCW    = 'Q';
@@ -98,6 +102,8 @@ void setup() {
     if (KEYBOARD_ENABLED) NKROKeyboard.begin();
 
     lTime[0] = lTime[1] = rTime[0] = rTime[1] = 0;
+
+    lHigh[0] = lHigh[1] = rHigh[0] = rHigh[1] = 0;
 }
 
 void loop() {
@@ -127,8 +133,14 @@ void loop() {
     output += "  ";
 
     // read encoders: convert to format prev1prev2curr1curr2
-    knobStates[0] = ((knobStates[0] << 2) | (digitalRead(VOL_L1) << 1) | digitalRead(VOL_L2)) % (1 << 3);
-    knobStates[1] = ((knobStates[1] << 2) | (digitalRead(VOL_R1) << 1) | digitalRead(VOL_R2)) % (1 << 3);
+    
+    readKnobs();
+    if (knobPollCount >= KNOB_REDUCTION) {
+        knobStates[0] = ((knobStates[0] << 2) | (lHigh[0] >= KNOB_REDUCTION/2 ? HIGH : LOW << 1) | (lHigh[1] >= KNOB_REDUCTION/2 ? HIGH : LOW)) % (1 << 4);
+        knobStates[1] = ((knobStates[1] << 2) | (lHigh[0] >= KNOB_REDUCTION/2 ? HIGH : LOW << 1) | (lHigh[1] >= KNOB_REDUCTION/2 ? HIGH : LOW)) % (1 << 4);
+        knobPollCount = 0;
+        lHigh[0] = lHigh[1] = rHigh[0] = rHigh[1] = 0;
+    }
 
     // VOL_L and VOL_R
     output += processKnob(lTime, knobStates[0], L_CW, L_CCW);
@@ -138,6 +150,22 @@ void loop() {
     if (KEYBOARD_ENABLED) NKROKeyboard.send();
     
     delay(1);
+}
+
+void readKnobs() {
+    if (digitalRead(VOL_L1) == HIGH) {
+        lHigh[0]++;
+    }
+    if (digitalRead(VOL_L2) == HIGH) {
+        lHigh[1]++;
+    }
+    if (digitalRead(VOL_R1) == HIGH) {
+        rHigh[0]++;
+    }
+    if (digitalRead(VOL_R2) == HIGH) {
+        rHigh[1]++;
+    }
+    knobPollCount++;
 }
 
 char processKnob(int time[], int knobState, char CW, char CCW) {
