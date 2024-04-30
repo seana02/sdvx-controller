@@ -126,9 +126,9 @@ void loop() {
     // output text spacer
     output += "  ";
 
-    // read encoders: convert to format prev1prev2curr1curr2
-    knobStates[0] = ((knobStates[0] << 2) | (digitalRead(VOL_L1) << 1) | digitalRead(VOL_L2)) % (1 << 3);
-    knobStates[1] = ((knobStates[1] << 2) | (digitalRead(VOL_R1) << 1) | digitalRead(VOL_R2)) % (1 << 3);
+    // read encoders: convert to format prev1prev2curr1curr
+    knobStates[0] = ((knobStates[0] << 2) | (digitalRead(VOL_L1) << 1) | digitalRead(VOL_L2)) % (1 << 4);
+    knobStates[1] = ((knobStates[1] << 2) | (digitalRead(VOL_R1) << 1) | digitalRead(VOL_R2)) % (1 << 4);
 
     // VOL_L and VOL_R
     output += processKnob(lTime, knobStates[0], L_CW, L_CCW);
