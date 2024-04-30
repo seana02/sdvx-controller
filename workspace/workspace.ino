@@ -54,11 +54,20 @@ const int BAD       = 0;
 // 0110 => x
 // 
 
+/*
 const int knobDirection[16] = {
       0, CCW,  CW, BAD,
      CW,   0, BAD, CCW,
     CCW, BAD,  0,   CW,
     BAD,  CW, CCW,   0
+};
+*/
+
+const int knobDirection[16] = {
+    CCW, CW, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+    0, 0, 0, 0
 };
 
 const int btnArr[btnCount] = {START, BT_A, BT_B, BT_C, BT_D, FX_L, FX_R};
@@ -78,7 +87,7 @@ const int ACTIVE_CYCLES = 1;
 int lTime[2], rTime[2];
 
 
-int prevL, lState;
+//int prevL, lState;
 
 void setup() {
     Serial.begin(9600);
@@ -101,7 +110,7 @@ void setup() {
     if (KEYBOARD_ENABLED) NKROKeyboard.begin();
 
     lTime[0] = lTime[1] = rTime[0] = rTime[1] = 0;
-    prevL = lState = 0;
+    //prevL = lState = 0;
 }
 
 void loop() {
@@ -131,14 +140,14 @@ void loop() {
     output += "  ";
 
     // read encoders: convert to format prev1prev2curr1curr
-    //knobStates[0] = ((knobStates[0] << 2) | (digitalRead(VOL_L1) << 1) | digitalRead(VOL_L2)) % (1 << 4);
-    //knobStates[1] = ((knobStates[1] << 2) | (digitalRead(VOL_R1) << 1) | digitalRead(VOL_R2)) % (1 << 4);
+    knobStates[0] = ((knobStates[0] << 2) | (digitalRead(VOL_L1) << 1) | digitalRead(VOL_L2)) % (1 << 4);
+    knobStates[1] = ((knobStates[1] << 2) | (digitalRead(VOL_R1) << 1) | digitalRead(VOL_R2)) % (1 << 4);
 
     // VOL_L and VOL_R
-    //output += processKnob(lTime, knobStates[0], L_CW, L_CCW);
-    //output += processKnob(rTime, knobStates[1], R_CW, R_CCW);
+    output += processKnob(lTime, knobStates[0], L_CW, L_CCW);
+    output += processKnob(rTime, knobStates[1], R_CW, R_CCW);
 
-    lState = digitalRead(VOL_L1) << 1 | digitalRead(VOL_L2);
+/*     lState = digitalRead(VOL_L1) << 1 | digitalRead(VOL_L2);
     if (prevL == 0b00 && lState == 0b01) {
         lTime[1] = 20;
     } else {
@@ -151,14 +160,15 @@ void loop() {
     }
 
     String state = lTime[0] > 0 ? "CCW" : (lTime[1] > 0 ? "CW" : "X");
+    prevL = lState; */
 
-    Serial.println(state);
+    Serial.println(output);
     if (KEYBOARD_ENABLED) NKROKeyboard.send();
     
     delay(1);
 }
 
-char processKnob(int time[], int knobState, char CW, char CCW) {
+char processKnob(int time[], int knobState, char CWkey, char CCWkey) {
     // update knob direction if turning
     if (knobDirection[knobState] == CCW) {
         time[0] = ACTIVE_CYCLES;
@@ -173,20 +183,20 @@ char processKnob(int time[], int knobState, char CW, char CCW) {
     if (time[0] > 0) {
         output = 'L';
         if (KEYBOARD_ENABLED) {
-            NKROKeyboard.release(CW);
-            NKROKeyboard.add(CCW);
+            NKROKeyboard.release(CWkey);
+            NKROKeyboard.add(CCWkey);
         }
     } else if (time[1] > 0) {
         output = 'R';
         if (KEYBOARD_ENABLED) {
-            NKROKeyboard.release(CCW);
-            NKROKeyboard.add(CW);
+            NKROKeyboard.release(CCWkey);
+            NKROKeyboard.add(CWkey);
         }
     } else {
         output = 'x';
         if (KEYBOARD_ENABLED) {
-            NKROKeyboard.release(CCW);
-            NKROKeyboard.release(CW);
+            NKROKeyboard.release(CCWkey);
+            NKROKeyboard.release(CWkey);
         }
     }
 
