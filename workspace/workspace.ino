@@ -77,6 +77,9 @@ const char R_CW     = 'P';
 const int ACTIVE_CYCLES = 1;
 int lTime[2], rTime[2];
 
+
+int prevL, lState;
+
 void setup() {
     Serial.begin(9600);
     
@@ -98,6 +101,7 @@ void setup() {
     if (KEYBOARD_ENABLED) NKROKeyboard.begin();
 
     lTime[0] = lTime[1] = rTime[0] = rTime[1] = 0;
+    prevL = lState = 0;
 }
 
 void loop() {
@@ -127,14 +131,28 @@ void loop() {
     output += "  ";
 
     // read encoders: convert to format prev1prev2curr1curr
-    knobStates[0] = ((knobStates[0] << 2) | (digitalRead(VOL_L1) << 1) | digitalRead(VOL_L2)) % (1 << 4);
-    knobStates[1] = ((knobStates[1] << 2) | (digitalRead(VOL_R1) << 1) | digitalRead(VOL_R2)) % (1 << 4);
+    //knobStates[0] = ((knobStates[0] << 2) | (digitalRead(VOL_L1) << 1) | digitalRead(VOL_L2)) % (1 << 4);
+    //knobStates[1] = ((knobStates[1] << 2) | (digitalRead(VOL_R1) << 1) | digitalRead(VOL_R2)) % (1 << 4);
 
     // VOL_L and VOL_R
-    output += processKnob(lTime, knobStates[0], L_CW, L_CCW);
-    output += processKnob(rTime, knobStates[1], R_CW, R_CCW);
+    //output += processKnob(lTime, knobStates[0], L_CW, L_CCW);
+    //output += processKnob(rTime, knobStates[1], R_CW, R_CCW);
 
-    Serial.println(output);
+    lState = digitalRead(VOL_L1) << 1 | digitalRead(VOL_L2);
+    if (prevL == 0b00 && lState == 0b01) {
+        lTime[1] = 20;
+    } else {
+        lTime[1] = lTime[1] <= 0 ? 0 : lTime[1] - 1;
+    }
+    if (prevL == 0b00 && lState == 0b10) {
+        lTime[0] = 20;
+    } else {
+        lTime[0] = lTime[0] <= 0 ? 0 : lTime[0] - 1;
+    }
+
+    String state = lTime[0] > 0 ? "CCW" : (lTime[1] > 0 ? "CW" : "X");
+
+    Serial.println(state);
     if (KEYBOARD_ENABLED) NKROKeyboard.send();
     
     delay(1);
