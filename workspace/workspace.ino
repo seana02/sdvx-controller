@@ -83,7 +83,7 @@ const char L_CW     = 'W';
 const char R_CCW    = 'O';
 const char R_CW     = 'P';
 
-const int ACTIVE_CYCLES = 1;
+const int ACTIVE_CYCLES = 20;
 int lTime[2], rTime[2];
 
 
