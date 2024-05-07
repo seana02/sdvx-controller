@@ -4,7 +4,7 @@
 
 const int btnCount = 7;
 const int knobCount = 2;
-const bool KEYBOARD_ENABLED = false;
+const bool KEYBOARD_ENABLED = true;
 
 /**
  * 
@@ -30,10 +30,10 @@ const int LED_D     = 9;
 const int LED_L     = 15;
 const int LED_R     = 16;
 
-const int VOL_L1    = 18;
-const int VOL_L2    = 19;
-const int VOL_R1    = 20;
-const int VOL_R2    = 21;
+const int VOL_L1    = 19;
+const int VOL_L2    = 18;
+const int VOL_R1    = 21;
+const int VOL_R2    = 20;
 const int CW        = 1;
 const int CCW       = -1;
 const int BAD       = 0;
@@ -77,11 +77,16 @@ const int ledArr[btnCount] = {LED_ST, LED_A, LED_B, LED_C, LED_D, LED_L, LED_R};
 int states[btnCount + knobCount];
 int knobStates[knobCount];
 
-const char btnKeys[btnCount] = {'T', 'D', 'F', 'J', 'K', 'C', 'M'};
+
+//const char btnKeys[btnCount] = {'T', 'D', 'F', 'J', 'K', 'C', 'M'};
 const char L_CCW    = 'Q';
 const char L_CW     = 'W';
 const char R_CCW    = 'O';
 const char R_CW     = 'P';
+
+
+//Project Diva Mega MixControls
+const char btnKeys[btnCount] = {'Y', 'W', 'A', 'S', 'D', 'Q', 'E'}; //fix start btn to Enter
 
 const int ACTIVE_CYCLES = 20;
 int lTime[2], rTime[2];
