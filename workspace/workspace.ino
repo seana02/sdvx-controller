@@ -1,5 +1,6 @@
 
 #include <Keyboard.h>
+#include <RotaryEncoder.h>
 
 const int btnCount = 7;
 const int knobCount = 2;
@@ -36,9 +37,13 @@ const int VOL_R2    = 20;
 
 // params
 //const int ACTIVE_CYCLES = 20;
-const int KNOB_TIME_INCREASE = 8;
-const int KNOB_TIME_MAX = 40;
-const int KNOB_THRESHOLD = 20;
+const int KNOB_TIME_INCREASE = 6;
+const int KNOB_TIME_DECAY = 3;
+const int KNOB_TIME_MAX = 30;
+const int KNOB_THRESHOLD = 18;
+
+// debug
+const bool printDebug = false;
 
 // consts
 const int CW        = 1;
@@ -76,6 +81,10 @@ const int knobDirection[16] = {
     CCW, EXT,   0,  CW,
     EXT,  CW, CCW,   0
 };
+/*
+const int knobDirection[16] = {
+      0,   x,  CW
+}*/
 
 const int btnArr[btnCount] = {START, BT_A, BT_B, BT_C, BT_D, FX_L, FX_R};
 const String btnName[btnCount] = {"START", "A_BT", "B_BT", "C_BT", "D_BT", "L_FX", "R_FX"};
@@ -96,6 +105,8 @@ const char R_CW     = '0';
 
 
 int lTime[2], rTime[2];
+
+RotaryEncoder encoder(VOL_L1, VOL_L2, RotaryEncoder::LatchMode::FOUR3);
 
 
 //int prevL, lState;
@@ -162,7 +173,30 @@ void loop() {
     output += processKnob(lTime, knobStates[0], L_CW, L_CCW);
     output += processKnob(rTime, knobStates[1], R_CW, R_CCW);
 
+    /*
+    Serial.print(lTime[0]);
+    Serial.print(" ");
+    Serial.print(lTime[1]);
+    Serial.println();
+    */
     
+    /*int processor[16] = {
+      0, -1, 1, -2,
+      1, 0, -2, -1,
+      -1, -2, 0, 1,
+      -2, 1, -1, 0,
+    };
+    switch(processor[knobStates[0]]) {
+      case 0:
+        Serial.println(count); count = 0; break;
+      case 1:
+        count++; break;
+      case -1:
+        Serial.print(count); Serial.println("REVERSE"); count = 0; break;
+      case -2:
+        Serial.print(count); Serial.println("IRREGULAR"); count = 0; break;
+    }*/
+
     /*if (true || prev != (PINF >> 4) % 4) {
       Serial.print((PINF >> 4) % 4);
       if (count++ % 50 == 0) {
@@ -171,7 +205,17 @@ void loop() {
       prev = (PINF >> 4) % 4;
     }*/
 
-    //Serial.println(output);
+    /*encoder.tick();
+    int newPos = encoder.getPosition();
+    if (count != newPos) {
+      Serial.print("pos:");
+      Serial.print(newPos);
+      Serial.print(" dir:");
+      Serial.println((int)(encoder.getDirection()));
+      count = newPos;
+    }*/
+
+    if (printDebug) Serial.println(output);
     
     for (int i = 0; i < btnCount; i++) {
       prevBtnStates[i] = states[i];
@@ -187,17 +231,21 @@ int clamp(int val, int min, int max) {
 }
 
 char processKnob(int time[], int knobState, char CWkey, char CCWkey) {
+    if (knobDirection[knobState] != 0) Serial.println(knobDirection[knobState]);
     // update knob direction if turning
     if (knobDirection[knobState] == CCW) {
         //time[0] = ACTIVE_CYCLES;
         //time[1] = 0;
         time[0] = clamp(time[0] + KNOB_TIME_INCREASE, 0, KNOB_TIME_MAX);
-        time[1] = clamp(time[1] - KNOB_TIME_INCREASE, 0, KNOB_TIME_MAX);
+        time[1] = clamp(time[1] - KNOB_TIME_DECAY, 0, KNOB_TIME_MAX);
     } else if (knobDirection[knobState] == CW) {
         //time[1] = ACTIVE_CYCLES;
         //time[0] = 0;
-        time[0] = clamp(time[0] - KNOB_TIME_INCREASE, 0, KNOB_TIME_MAX);
+        time[0] = clamp(time[0] - KNOB_TIME_DECAY, 0, KNOB_TIME_MAX);
         time[1] = clamp(time[1] + KNOB_TIME_INCREASE, 0, KNOB_TIME_MAX);
+    } else {
+        time[0] = clamp(time[0] - KNOB_TIME_DECAY, 0, KNOB_TIME_MAX);
+        time[1] = clamp(time[1] - KNOB_TIME_DECAY, 0, KNOB_TIME_MAX);
     }
 
     // decide output
@@ -223,11 +271,11 @@ char processKnob(int time[], int knobState, char CWkey, char CCWkey) {
     }
 
     // decrement active time
-    time[0] -= (time[0] > 0 ? 1 : 0);
-    time[1] -= (time[1] > 0 ? 1 : 0);
+    // time[0] = clamp(time[0] - KNOB_TIME_DECAY, 0, KNOB_TIME_MAX);
+    // time[1] = clamp(time[1] - KNOB_TIME_DECAY, 0, KNOB_TIME_MAX);
 
     return output;
-    return 'x';
+    //return 'x';
 }
 
 void pressIndex(int i) {
