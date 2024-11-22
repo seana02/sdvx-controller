@@ -1,90 +1,32 @@
 
 #include <Keyboard.h>
-#include <RotaryEncoder.h>
 
 const int btnCount = 7;
 const int knobCount = 2;
 const bool KEYBOARD_ENABLED = true;
+const bool debugEnabled = true;
 
-/**
- * 
- * Pin assignments
- * 
-*/
 
-// buttons
-const int START     = 0;
-const int BT_A      = 2;
-const int BT_B      = 4;
-const int BT_C      = 6;
-const int BT_D      = 8;
-const int FX_L      = 14;
-const int FX_R      = 10;
+//            Pin assignments
+//            Btn          LED
+//const int START  =  0, LED_ST =  1;
+//const int BT_A   =  2, LED_A  =  3;
+const int START  = 21, LED_ST = 20;
+const int BT_A   = 19, LED_A  = 18;
+const int BT_B   =  4, LED_B  =  5;
+const int BT_C   =  6, LED_C  =  7;
+const int BT_D   =  8, LED_D  =  9;
+const int FX_L   = 14, LED_L  = 15;
+const int FX_R   = 10, LED_R  = 16;
 
-// light
-const int LED_ST    = 1;
-const int LED_A     = 3;
-const int LED_B     = 5;
-const int LED_C     = 7;
-const int LED_D     = 9;
-const int LED_L     = 15;
-const int LED_R     = 16;
-
-const int VOL_L1    = 19;
-const int VOL_L2    = 18;
-const int VOL_R1    = 21;
-const int VOL_R2    = 20;
+//const int VOL_L1 = 19, VOL_L2 = 18;
+//const int VOL_R1 = 21, VOL_R2 = 20;
+const int VOL_L1 =  1, VOL_L2 =  0;
+const int VOL_R1 =  2, VOL_R2 =  3;
 
 // params
-//const int ACTIVE_CYCLES = 20;
-const int KNOB_TIME_INCREASE = 6;
-const int KNOB_TIME_DECAY = 3;
-const int KNOB_TIME_MAX = 30;
-const int KNOB_THRESHOLD = 18;
-
-// debug
-const bool printDebug = false;
-
-// consts
-const int CW        = 1;
-const int CCW       = -1;
-const int EXT       = 99;
-// prev1 prev2 curr1 curr2
-// 1110 => CCW
-// 1000 => CCW
-// 0001 => CCW
-// 0111 => CCW
-
-// 1101 => CW
-// 0100 => CW
-// 0010 => CW
-// 1011 => CW
-
-// 0000 => 0
-// 0011 => x
-// 0101 => 0
-// 0110 => x
-// 
-
-/*
-const int knobDirection[16] = {
-      0, CCW,  CW, BAD,
-     CW,   0, BAD, CCW,
-    CCW, BAD,  0,   CW,
-    BAD,  CW, CCW,   0
-};
-*/
-
-const int knobDirection[16] = {
-      0, CCW,  CW, EXT,
-     CW,   0, EXT, CCW,
-    CCW, EXT,   0,  CW,
-    EXT,  CW, CCW,   0
-};
-/*
-const int knobDirection[16] = {
-      0,   x,  CW
-}*/
+// divisor; lower is more sensitive
+const int KNOB_SENSITIVITY = 1;
 
 const int btnArr[btnCount] = {START, BT_A, BT_B, BT_C, BT_D, FX_L, FX_R};
 const String btnName[btnCount] = {"START", "A_BT", "B_BT", "C_BT", "D_BT", "L_FX", "R_FX"};
@@ -103,13 +45,7 @@ const char L_CW     = '2';
 const char R_CCW    = '9';
 const char R_CW     = '0';
 
-
 int lTime[2], rTime[2];
-
-RotaryEncoder encoder(VOL_L1, VOL_L2, RotaryEncoder::LatchMode::FOUR3);
-
-
-//int prevL, lState;
 
 void setup() {
     Serial.begin(9600);
@@ -133,28 +69,25 @@ void setup() {
     pinMode(VOL_R1, INPUT_PULLUP);
     pinMode(VOL_R2, INPUT_PULLUP);
 
+    attachInterrupt(digitalPinToInterrupt(VOL_L1), intL1, RISING);
+    attachInterrupt(digitalPinToInterrupt(VOL_L2), intL2, RISING);
+    attachInterrupt(digitalPinToInterrupt(VOL_R1), intR1, RISING);
+    attachInterrupt(digitalPinToInterrupt(VOL_R2), intR2, RISING);
+
     if (KEYBOARD_ENABLED) Keyboard.begin();
 
     lTime[0] = lTime[1] = rTime[0] = rTime[1] = 0;
-    //prevL = lState = 0;
 }
-int count = 0;
-int prev = 0;
+
 void loop() {
-    // print button pushed state
-    String output = "";
-    
     // read and light buttons
     for (int i = 0; i < btnCount; i++) {
         // read inputs
         states[i] = digitalRead(btnArr[i]);
 
-        // change output string
         if (states[i] == LOW) {
-            output += btnName[i].substring(0, 1);
             if (KEYBOARD_ENABLED && prevBtnStates[i] == HIGH) pressIndex(i); //Keyboard.press(btnKeys[i]);
         } else {
-            output += "x";
             if (KEYBOARD_ENABLED && prevBtnStates[i] == LOW) releaseIndex(i); //Keyboard.release(btnKeys[i]);
         }
 
@@ -162,65 +95,19 @@ void loop() {
         digitalWrite(ledArr[i], !states[i]);
     }
 
-    // output text spacer
-    output += "  ";
+    // check VOL_L and VOL_R
+    updateKnobs(lTime, L_CCW, L_CW);
+    updateKnobs(rTime, R_CCW, R_CW);  
 
-    // read encoders: convert to format prev1prev2curr1curr
-    knobStates[0] = ((knobStates[0] << 2) | (PINF >> 6)      ) % (1 << 4);
-    knobStates[1] = ((knobStates[1] << 2) | ((PINF >> 4) % 4)) % (1 << 4);
+    lTime[0] = clamp(lTime[0] - 1, 0, 9);
+    lTime[1] = clamp(lTime[1] - 1, 0, 9);
+    rTime[0] = clamp(rTime[0] - 1, 0, 9);
+    rTime[1] = clamp(rTime[1] - 1, 0, 9);
 
-    // VOL_L and VOL_R
-    output += processKnob(lTime, knobStates[0], L_CW, L_CCW);
-    output += processKnob(rTime, knobStates[1], R_CW, R_CCW);
-
-    /*
-    Serial.print(lTime[0]);
-    Serial.print(" ");
-    Serial.print(lTime[1]);
-    Serial.println();
-    */
-    
-    /*int processor[16] = {
-      0, -1, 1, -2,
-      1, 0, -2, -1,
-      -1, -2, 0, 1,
-      -2, 1, -1, 0,
-    };
-    switch(processor[knobStates[0]]) {
-      case 0:
-        Serial.println(count); count = 0; break;
-      case 1:
-        count++; break;
-      case -1:
-        Serial.print(count); Serial.println("REVERSE"); count = 0; break;
-      case -2:
-        Serial.print(count); Serial.println("IRREGULAR"); count = 0; break;
-    }*/
-
-    /*if (true || prev != (PINF >> 4) % 4) {
-      Serial.print((PINF >> 4) % 4);
-      if (count++ % 50 == 0) {
-        Serial.println();
-      }
-      prev = (PINF >> 4) % 4;
-    }*/
-
-    /*encoder.tick();
-    int newPos = encoder.getPosition();
-    if (count != newPos) {
-      Serial.print("pos:");
-      Serial.print(newPos);
-      Serial.print(" dir:");
-      Serial.println((int)(encoder.getDirection()));
-      count = newPos;
-    }*/
-
-    if (printDebug) Serial.println(output);
-    
     for (int i = 0; i < btnCount; i++) {
       prevBtnStates[i] = states[i];
     }
-    
+
     //delay(1);
 }
 
@@ -230,54 +117,113 @@ int clamp(int val, int min, int max) {
     return val;
 }
 
-char processKnob(int time[], int knobState, char CWkey, char CCWkey) {
-    if (knobDirection[knobState] != 0) Serial.println(knobDirection[knobState]);
-    // update knob direction if turning
-    if (knobDirection[knobState] == CCW) {
-        //time[0] = ACTIVE_CYCLES;
-        //time[1] = 0;
-        time[0] = clamp(time[0] + KNOB_TIME_INCREASE, 0, KNOB_TIME_MAX);
-        time[1] = clamp(time[1] - KNOB_TIME_DECAY, 0, KNOB_TIME_MAX);
-    } else if (knobDirection[knobState] == CW) {
-        //time[1] = ACTIVE_CYCLES;
-        //time[0] = 0;
-        time[0] = clamp(time[0] - KNOB_TIME_DECAY, 0, KNOB_TIME_MAX);
-        time[1] = clamp(time[1] + KNOB_TIME_INCREASE, 0, KNOB_TIME_MAX);
+void updateKnobs(int time[], char CCW, char CW) {
+  if (time[0] / KNOB_SENSITIVITY > 0) {
+      Keyboard.press(CCW);
+      Keyboard.release(CW);
+    } else if (time[1] / KNOB_SENSITIVITY > 0) {
+      Keyboard.release(CCW);
+      Keyboard.press(CW);
     } else {
-        time[0] = clamp(time[0] - KNOB_TIME_DECAY, 0, KNOB_TIME_MAX);
-        time[1] = clamp(time[1] - KNOB_TIME_DECAY, 0, KNOB_TIME_MAX);
+      Keyboard.release(CCW);
+      Keyboard.release(CW);
     }
-
-    // decide output
-    char output;
-    if (time[0] > KNOB_THRESHOLD) {
-        output = 'L';
-        if (KEYBOARD_ENABLED) {
-            Keyboard.release(CWkey);
-            Keyboard.press(CCWkey);
-        }
-    } else if (time[1] > KNOB_THRESHOLD) {
-        output = 'R';
-        if (KEYBOARD_ENABLED) {
-            Keyboard.release(CCWkey);
-            Keyboard.press(CWkey);
-        }
-    } else {
-        output = 'x';
-        if (KEYBOARD_ENABLED) {
-            Keyboard.release(CCWkey);
-            Keyboard.release(CWkey);
-        }
-    }
-
-    // decrement active time
-    // time[0] = clamp(time[0] - KNOB_TIME_DECAY, 0, KNOB_TIME_MAX);
-    // time[1] = clamp(time[1] - KNOB_TIME_DECAY, 0, KNOB_TIME_MAX);
-
-    return output;
-    //return 'x';
 }
 
+void intL1() { interruptHandler(lTime, VOL_L2, 1, "   L->", " <-L  "); }
+void intL2() { interruptHandler(lTime, VOL_L1, 0, " <-L  ", "   L->"); }
+void intR1() { interruptHandler(rTime, VOL_R2, 1, "   R->", " <-R  "); }
+void intR2() { interruptHandler(rTime, VOL_R1, 0, " <-R  ", "   R->"); }
+
+int count = 0;
+void interruptHandler(int time[], int toTest, int dir, String debugString, String debugAlt) {
+  if (digitalRead(toTest) == LOW) {
+    time[dir] = 1;
+    time[1-dir] = 0;
+    if (debugEnabled) {
+      count += 2*dir-1;
+      Serial.print(count);
+      Serial.println(debugString);
+    }
+  } else {
+    time[1-dir] = 1;
+    time[dir] = 0;
+    if (debugEnabled) {
+      count -= 2*dir-1;
+      Serial.print(count);
+      Serial.println(debugAlt);
+    }
+  }
+}
+/*
+void intL1() {
+  // L1 just rose
+  if (digitalRead(VOL_L2) == LOW) {
+    lTime[1] = 1*KNOB_SENSITIVITY;
+    lTime[0] = 0;
+    if (debugEnabled) {
+      count++;
+      Serial.print(count);
+      Serial.println("   L->");
+    }
+  } else {
+    lTime[0] = 1*KNOB_SENSITIVITY;
+    lTime[1] = 0;
+    if (debugEnabled) {
+      count--;
+      Serial.print(count);
+      Serial.println(" <-L  ");
+    }
+  }
+}
+
+void intL2() {
+  // L2 just rose
+  if (digitalRead(VOL_L1) == LOW) {
+    lTime[0] = 1*KNOB_SENSITIVITY;
+    lTime[1] = 0;
+    if (debugEnabled) {
+      count--;
+      Serial.print(count);
+      Serial.println(" <-L  ");
+    }
+  } else {
+    lTime[1] = 1*KNOB_SENSITIVITY;
+    lTime[0] = 0;
+    if (debugEnabled) {
+      count++;
+      Serial.print(count);
+      Serial.println("   L->");
+    }
+  }
+}
+
+void intR1() {
+  // R1 just rose
+  if (digitalRead(VOL_R2) == LOW) {
+    rTime[1] = 1*KNOB_SENSITIVITY;
+    rTime[0] = 0;
+    Serial.println("  R->");
+  } else {
+    rTime[0] = 1*KNOB_SENSITIVITY;
+    rTime[1] = 0;
+    Serial.println("<-R  ");
+  }
+}
+
+void intR2() {
+  // R2 just rose
+  if (digitalRead(VOL_R1) == LOW) {
+    rTime[0] = 1*KNOB_SENSITIVITY;
+    rTime[1] = 0;
+    Serial.println("<-R  ");
+  } else {
+    rTime[1] = 1*KNOB_SENSITIVITY;
+    rTime[0] = 0;
+    Serial.println("  R->");
+  }
+}
+*/
 void pressIndex(int i) {
   if (btnKeys[i] == '\\') {
     Keyboard.press(specialKeys[i]);
